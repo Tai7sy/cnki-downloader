@@ -1,0 +1,94 @@
+<html>
+<head>
+    <title>Test</title>
+</head>
+<body>
+<p>
+    jQuery loaded
+</p>
+</body>
+
+<script type="text/javascript" src="http://ossweb-img.qq.com/images/bangbang/js/jquery.min.js"></script>
+<script>
+
+    var reOpen = (function init () {
+        // The ID of the extension we want to talk to.
+        var editorExtensionId = "olknlmljjgiminhbdmpadjafbkbjmmcc";
+
+        function openWithHeader (method, url, headers, data) {
+            if (typeof data === 'string') {
+                function deparam(query){
+                    var setValue = function(root, path, value){
+                        if(path.length > 1){
+                            var dir = path.shift();
+                            if(typeof root[dir] === 'undefined' ){
+                                root[dir] = path[0] === '' ? [] : {};
+                            }
+
+                            arguments.callee(root[dir], path, value);
+                        }else{
+                            if( root instanceof Array ){
+                                root.push(value);
+                            }else{
+                                root[path] = value;
+                            }
+                        }
+                    };
+                    var nvp = query.split('&');
+                    var data = {};
+                    for( var i = 0 ; i < nvp.length ; i++ ){
+                        var pair = nvp[i].split('=');
+                        var name = decodeURIComponent(pair[0]);
+                        var value = decodeURIComponent(pair[1]);
+
+                        var path = name.match(/(^[^\[]+)(\[.*\]$)?/);
+                        var first = path[1];
+                        if(path[2]){
+                            //case of 'array[level1]' || 'array[level1][level2]'
+                            path = path[2].match(/(?=\[(.*)\]$)/)[1].split('][')
+                        }else{
+                            //case of 'name'
+                            path = [];
+                        }
+                        path.unshift(first);
+
+                        setValue(data, path, value);
+                    }
+                    return data;
+                }
+                data = deparam(data);
+                console.log('data deparam', data);
+            }
+
+            // Make a simple request:
+            chrome.runtime.sendMessage(editorExtensionId,
+                { action: 'openWithHeader', url: url, method: method, headers: headers, data: data },
+                function (response) {
+                    console.log('response', response);
+                    if (!response || response.ret !== true) {
+                        console.error('openWithHeader', (response && response.ret) || 'unknow error')
+                    }
+                }
+            );
+        }
+
+        return {
+            init: function(extensionId){
+                editorExtensionId = extensionId
+            },
+            open: openWithHeader,
+            get: function (url, headers) {
+                return openWithHeader('GET', url, headers);
+            },
+            post: function (url, data, headers) {
+                return openWithHeader('POST', url, headers, data);
+            }
+        }
+    })();
+
+    reOpen.open('POST', 'http://his.cat/ip/', {
+        'test-header': 'test value',
+        'Cookie': 'fakecookie=fuck',
+        'Referer': 'fake referer'
+    }, "test=test_value&name%5B%5D=1&name%5B%5D=2&name%5B%5D=3");
+</script>
